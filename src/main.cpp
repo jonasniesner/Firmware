@@ -1837,10 +1837,10 @@ void initDisplay(){
     bbepSendCMDSequence(&bbep, bbep.pInitFull);
     String chipId = getChipIdHex();
     String infoText = "opendisplay.org\nName: OD" + chipId + "\nFW: " + String(getFirmwareMajor()) + "." + String(getFirmwareMinor()) + "\nFirmware by\nJonas Niesner";
-    if (globalConfig.displays[0].transmission_modes & TRANSMISSION_MODE_CLEAR_ON_BOOT) writeTextAndFill("");
-    else writeTextAndFill(infoText.c_str());
+    if (! (globalConfig.displays[0].transmission_modes & TRANSMISSION_MODE_CLEAR_ON_BOOT)){
     bbepRefresh(&bbep, REFRESH_FULL);
     waitforrefresh(60);
+    }
     pwrmgm(false);
     }
     else{
@@ -1973,9 +1973,15 @@ void sendResponse(uint8_t* response, uint8_t len){
         writeSerial("ERROR: Response too large for queue (" + String(len) + " > " + String(MAX_RESPONSE_SIZE) + ")");
     }
     #endif
-    #ifndef TARGET_ESP32
-    delay(20);
-    writeSerial("Response sent successfully");
+    #ifdef TARGET_NRF
+    // NRF devices send BLE notifications directly
+    if (Bluefruit.connected() && imageCharacteristic.notifyEnabled()) {
+        imageCharacteristic.notify(response, len);
+        writeSerial("NRF: BLE notification sent (" + String(len) + " bytes)");
+    } else {
+        writeSerial("ERROR: Cannot send BLE response - not connected or notifications not enabled");
+    }
+    delay(20); // Brief delay to let BLE stack process
     #endif
 }
 
