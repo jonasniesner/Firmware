@@ -32,7 +32,8 @@ jobs:
           cp .pio/build/nrf52840custom/firmware.hex firmware_output/NRF52840.hex
           TAG_NAME=${{ github.event.release.tag_name }}
           adafruit-nrfutil dfu genpkg --dev-type 0x0052 --application firmware_output/NRF52840.hex firmware_output/NRF52840.zip
-          adafruit-nrfutil dfu genpkg --dev-type 0x0052 --softdevice_bootloader bin/opendisplay_nrf52840_bootloader-0.10.6_s140_7.3.0.hex --application firmware_output/NRF52840.hex firmware_output/NRF52840-full.zip
+          python -c "from intelhex import IntelHex; d=IntelHex('bin/opendisplay_nrf52840_bootloader-0.10.6_s140_7.3.0.hex').todict(); IntelHex({k:v for k,v in d.items() if k<0x27000}).write_hex_file('sd.hex'); IntelHex({k:v for k,v in d.items() if k>=0xF4000}).write_hex_file('bl.hex')"
+          adafruit-nrfutil dfu genpkg --dev-type 0x0052 --softdevice sd.hex --bootloader bl.hex --application firmware_output/NRF52840.hex firmware_output/NRF52840-full.zip
           python uf2conv.py firmware_output/NRF52840.hex --family 0xADA52840 --output firmware_output/NRF52840.uf2
 
       - name: Build & Package esp32-s3-N16R8 Firmware
